@@ -86,5 +86,6 @@ This project is licensed under the **MIT License**. See [LICENSE](LICENSE) for d
 
 ## Author
 Developed by **Jérémy ALBOUYS PERROIS** for **QUANTEEC**.
+Updated by Simon Jones for Greening of Streaming
 
 
