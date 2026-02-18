@@ -1,2 +1,1 @@
-asyncio
-tapo
+tapo==0.8.1
