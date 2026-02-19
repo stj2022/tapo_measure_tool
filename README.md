@@ -13,7 +13,7 @@ A GUI-based tool to measure and log power consumption from **TP-Link Tapo P110**
 
 ### **1. Clone the Repository**
 ```sh
-git clone https://github.com/Quanteec/tapo_measure_tool.git
+git clone https://github.com/stj2022/tapo_measure_tool.git
 cd tapo-measure-tool
 ```
 
