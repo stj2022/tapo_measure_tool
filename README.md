@@ -36,7 +36,7 @@ python tapo_measure_tool.py
 ```
 
 ### **2. Configure Your Settings**
-- **Enter Tapo login credentials** (Username & Password).
+- **Enter your Tapo login credentials** (Username & Password).
 - **Select an IP Address** from the dropdown or add a new one.
 - **Set the measurement interval (seconds)**.
 - **Set the duration for the measurement (seconds)**.
@@ -44,7 +44,7 @@ python tapo_measure_tool.py
 - **Select a folder to save results**.
 
 ### **3. Start Measurement**
-- Click **"Ping"** to check connectivity.
+- Click **"Connect"** to establish connectivity to plug.
 - Click **"Start Measurement"** to begin.
 - View real-time power data in the terminal output area.
 - The progress bar updates as the measurement progresses.
@@ -62,8 +62,8 @@ The tool stores configuration settings in `config.json`, which includes:
     "password": "",
     "ip_addresses": [],
     "selected_ip": "",
-    "measure_interval": 0.5,
-    "measure_duration": 360,
+    "measure_interval": 2,
+    "measure_duration": 600,
     "results_folder": "./results"
 }
 ```
@@ -76,7 +76,7 @@ These values are updated automatically when changed in the GUI.
 ### **2. Measurement Doesn't Start**
 - Ensure **Tapo P110** is powered on and accessible.
 - Verify correct **username and password**.
-- Try **pushing "Ping"** to check device availability.
+- Use **"Connect"** to check device availability.
 
 ## Contributing
 Feel free to submit pull requests or report issues in the **GitHub Issues** section.

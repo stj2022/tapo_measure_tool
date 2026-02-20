@@ -7,6 +7,7 @@ import tkinter as tk
 from tkinter import filedialog, messagebox, simpledialog, ttk
 from datetime import datetime
 from tapo import ApiClient
+from PIL import Image, ImageTk
 
 main_loop = asyncio.new_event_loop()  # Create a new event loop for the main thread
 asyncio.set_event_loop(main_loop)
@@ -14,6 +15,16 @@ asyncio.set_event_loop(main_loop)
 
 shouldSaveIfCancelled = False
 measurement_task = None  # Global variable to hold the measurement task
+
+# Colour palette
+C_BG        = "#1e2e22"   # dark green background
+C_BG2       = "#2a3d2f"   # slightly lighter for frames
+C_ACCENT    = "#629e71"   # primary green rgb(98,158,113)
+C_ACCENT2   = "#4a7d58"   # darker green for button hover / active states
+C_TEXT      = "#d4edd9"   # light mint text
+C_TEXT_DIM  = "#8fbf99"   # dimmer text
+C_ENTRY_BG  = "#243329"   # entry field background
+C_ENTRY_FG  = "#d4edd9"   # entry field text
 
 
 def load_config():
@@ -25,8 +36,8 @@ def load_config():
             "filename": "measurement_data",
             "ip_addresses": [],
             "selected_ip": "",
-            "measure_interval": 0.5,
-            "measure_duration": 360,
+            "measure_interval": 2,
+            "measure_duration": 600,
             "results_folder": "./results"
         }
         save_config(default_config)
@@ -48,9 +59,11 @@ def set_all_widgets_state(state, parent):
         elif isinstance(widget, tk.Frame):
             set_all_widgets_state(state, widget)  # Recursively apply to frame children
     if state == "disabled":
-        measure_button.config(state="normal", text="Stop Measurement", command=cancel_measurement)
+        measure_button.config(state="normal", text="Stop Measurement", command=cancel_measurement,
+                              bg="#8b2e2e", fg=C_TEXT, activebackground="#a33535")
     else:
-        measure_button.config(state="normal", text="Start Measurement", command=start_measurement_threadsafe)
+        measure_button.config(state="normal", text="Start Measurement", command=start_measurement_threadsafe,
+                              bg=C_ACCENT, fg=C_BG, activebackground=C_ACCENT2)
 
 def get_unique_filename(folder, filename):
     base_filename = filename
@@ -88,7 +101,7 @@ def remove_ip():
         save_config(tapo_config)
         ip_dropdown["values"] = tapo_config["ip_addresses"]
         ip_var.set("")
-        update_status("IP removed", "red")
+        update_status("IP removed", "#e07070")
 
 def ping_ip_threadsafe():
     asyncio.run_coroutine_threadsafe(ping_ip_async(), main_loop)
@@ -102,12 +115,12 @@ async def ping_ip_async():
     try:
         device = await asyncio.wait_for(client.p110(ip), timeout=5)
         response = await asyncio.wait_for(device.get_device_info_json(), timeout=5)
-        update_status(f"Connected to {ip}", "green")
+        update_status(f"Connected to {ip}", C_ACCENT)
         measure_button.config(state="normal")
     except asyncio.TimeoutError:
-        update_status(f"Timeout: {ip} is unreachable", "red")
+        update_status(f"Timeout: {ip} is unreachable", "#e07070")
     except Exception as e:
-        update_status(f"Error: {e}", "red")
+        update_status(f"Error: {e}", "#e07070")
 
 def start_measurement_threadsafe():
     global shouldSaveIfCancelled
@@ -154,7 +167,7 @@ async def measure_power_async():
     try:
         await measurement_task
     except asyncio.CancelledError:
-        update_status("Measurement cancelled.", "red")
+        update_status("Measurement cancelled.", "#e07070")
 
 async def measure_power(tapo_ip, measure_interval, measure_duration, csv_name):
     client = ApiClient(tapo_config["username"], tapo_config["password"])
@@ -221,7 +234,23 @@ root.title("Tapo Measurement Tool")
 root.geometry("600x600")
 root.columnconfigure(1, weight=1)
 root.rowconfigure(6, weight=1)
+root.configure(bg=C_BG)
 root.protocol("WM_DELETE_WINDOW", on_close)
+
+# Style ttk widgets
+style = ttk.Style()
+style.theme_use("clam")
+style.configure("TCombobox",
+                fieldbackground=C_ENTRY_BG,
+                background=C_ENTRY_BG,
+                foreground=C_ENTRY_FG,
+                selectbackground=C_ACCENT,
+                selectforeground=C_BG)
+style.configure("green.Horizontal.TProgressbar",
+                troughcolor=C_BG2,
+                background=C_ACCENT,
+                darkcolor=C_ACCENT,
+                lightcolor=C_ACCENT)
 
 threading.Thread(target=main_loop.run_until_complete, args=(run_main_loop(),), daemon=True).start()
 
@@ -232,61 +261,104 @@ password_var = tk.StringVar(value=tapo_config.get("password", ""))
 filename_var = tk.StringVar(value=tapo_config.get("filename", ""))
 folder_var = tk.StringVar(value=tapo_config.get("results_folder", "./results"))
 ip_var = tk.StringVar(value=tapo_config.get("selected_ip", ""))
-interval_var = tk.StringVar(value=str(tapo_config.get("measure_interval", "0.5")))
-duration_var = tk.StringVar(value=str(tapo_config.get("measure_duration", "360")))
+interval_var = tk.StringVar(value=str(tapo_config.get("measure_interval", "2")))
+duration_var = tk.StringVar(value=str(tapo_config.get("measure_duration", "600")))
+
+
+def make_label(parent, text, **kwargs):
+    return tk.Label(parent, text=text, bg=C_BG2, fg=C_TEXT, **kwargs)
+
+def make_entry(parent, textvariable, **kwargs):
+    return tk.Entry(parent, textvariable=textvariable,
+                    bg=C_ENTRY_BG, fg=C_ENTRY_FG,
+                    insertbackground=C_ACCENT,
+                    relief="flat", highlightthickness=1,
+                    highlightcolor=C_ACCENT, highlightbackground=C_BG2,
+                    **kwargs)
+
+def make_button(parent, text, command, **kwargs):
+    return tk.Button(parent, text=text, command=command,
+                     bg=C_ACCENT, fg=C_BG,
+                     activebackground=C_ACCENT2, activeforeground=C_TEXT,
+                     relief="flat", padx=6, pady=3,
+                     **kwargs)
 
 
 # UI Layout
-frame = tk.Frame(root)
+frame = tk.Frame(root, bg=C_BG2)
 frame.grid(row=0, column=0, columnspan=3, sticky="ew", padx=5, pady=5)
 frame.columnconfigure(1, weight=1)
 
-tk.Label(frame, text="Username:").grid(row=0, column=0, sticky="w")
-tk.Entry(frame, textvariable=username_var).grid(row=0, column=1, sticky="ew")
-tk.Label(frame, text="Password:").grid(row=1, column=0, sticky="w")
-tk.Entry(frame, textvariable=password_var, show="*").grid(row=1, column=1, sticky="ew")
+# Logo — top right, height ~= 3 entry rows (approx 80px)
+_logo_label = None
+try:
+    _LOGO_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "GoSLogo.jpeg")
+    if not os.path.exists(_LOGO_PATH):
+        # fallback: look next to the script working directory
+        _LOGO_PATH = "GoSLogo.jpeg"
+    _logo_img_raw = Image.open(_LOGO_PATH).convert("RGBA")
+    _logo_h = 80  # height to match ~3 entry rows
+    _logo_w = int(_logo_img_raw.width * _logo_h / _logo_img_raw.height)
+    _logo_img_raw = _logo_img_raw.resize((_logo_w, _logo_h), Image.LANCZOS)
+    _logo_photo = ImageTk.PhotoImage(_logo_img_raw)
+    _logo_label = tk.Label(frame, image=_logo_photo, bg=C_BG2, borderwidth=0)
+    _logo_label.image = _logo_photo  # keep reference
+    _logo_label.grid(row=0, column=4, rowspan=3, padx=(8, 10), pady=4, sticky="nse")
+except Exception as _e:
+    print(f"Logo could not be loaded: {_e}")
 
-tk.Label(frame, text="CSV Filename:").grid(row=2, column=0, sticky="w", padx=5, pady=5)
-tk.Entry(frame, textvariable=filename_var).grid(row=2, column=1, sticky="ew", padx=5, pady=5)
+make_label(frame, "Username:").grid(row=0, column=0, sticky="w", padx=5, pady=3)
+make_entry(frame, username_var).grid(row=0, column=1, sticky="ew", padx=5, pady=3)
 
-tk.Label(frame, text="Save Folder:").grid(row=3, column=0, sticky="w", padx=5, pady=5)
-tk.Entry(frame, textvariable=folder_var, state="readonly").grid(row=3, column=1, sticky="ew", padx=5, pady=5)
-tk.Button(frame, text="Browse", command=select_folder).grid(row=3, column=2, padx=5, pady=5)
+make_label(frame, "Password:").grid(row=1, column=0, sticky="w", padx=5, pady=3)
+make_entry(frame, password_var, show="*").grid(row=1, column=1, sticky="ew", padx=5, pady=3)
 
-tk.Label(frame, text="Select IP Address:").grid(row=4, column=0, sticky="w")
+make_label(frame, "CSV Filename:").grid(row=2, column=0, sticky="w", padx=5, pady=5)
+make_entry(frame, filename_var).grid(row=2, column=1, sticky="ew", padx=5, pady=5)
+
+make_label(frame, "Save Folder:").grid(row=3, column=0, sticky="w", padx=5, pady=5)
+make_entry(frame, folder_var, state="readonly").grid(row=3, column=1, sticky="ew", padx=5, pady=5)
+make_button(frame, "Browse", select_folder).grid(row=3, column=2, padx=5, pady=5)
+
+make_label(frame, "Select IP Address:").grid(row=4, column=0, sticky="w", padx=5)
 ip_dropdown = ttk.Combobox(frame, textvariable=ip_var, values=tapo_config["ip_addresses"])
-ip_dropdown.grid(row=4, column=1, sticky="ew")
-tk.Button(frame, text="Add IP", command=add_ip).grid(row=4, column=2)
-tk.Button(frame, text="Remove IP", command=remove_ip).grid(row=4, column=3)
-tk.Button(frame, text="Ping", command=ping_ip_threadsafe).grid(row=4, column=4)
+ip_dropdown.grid(row=4, column=1, sticky="ew", padx=5)
+make_button(frame, "Add IP", add_ip).grid(row=4, column=2, padx=2)
+make_button(frame, "Remove IP", remove_ip).grid(row=4, column=3, padx=2)
+make_button(frame, "Connect", ping_ip_threadsafe).grid(row=4, column=4, padx=2)
 
-status_label = tk.Label(frame, text="", fg="black")
-status_label.grid(row=5, column=0, columnspan=5)
+status_label = tk.Label(frame, text="", fg=C_TEXT_DIM, bg=C_BG2)
+status_label.grid(row=5, column=0, columnspan=5, pady=3)
 
-tk.Label(frame, text="Measure Interval (s):").grid(row=6, column=0, sticky="w")
-tk.Entry(frame, textvariable=interval_var).grid(row=6, column=1, sticky="ew")
-tk.Label(frame, text="Measure Duration (s):").grid(row=7, column=0, sticky="w")
-tk.Entry(frame, textvariable=duration_var).grid(row=7, column=1, sticky="ew")
+make_label(frame, "Measure Interval (s):").grid(row=6, column=0, sticky="w", padx=5, pady=3)
+make_entry(frame, interval_var).grid(row=6, column=1, sticky="ew", padx=5, pady=3)
+make_label(frame, "Measure Duration (s):").grid(row=7, column=0, sticky="w", padx=5, pady=3)
+make_entry(frame, duration_var).grid(row=7, column=1, sticky="ew", padx=5, pady=3)
 
-measure_button = tk.Button(frame, text="Start Measurement", command=start_measurement_threadsafe, state="disabled")
+measure_button = make_button(frame, "Start Measurement", start_measurement_threadsafe, state="disabled")
 measure_button.grid(row=8, column=1, pady=10)
 
 
-# Barre de progression
-progress_bar = ttk.Progressbar(root, orient="horizontal", length=400, mode="determinate")
+# Progress bar
+progress_bar = ttk.Progressbar(root, orient="horizontal", length=400, mode="determinate",
+                                style="green.Horizontal.TProgressbar")
 progress_bar.grid(row=9, column=0, columnspan=3, padx=5, pady=5)
 
-# Label de temps restant
-remaining_time_label = tk.Label(root, text="Time Remaining: 0s")
+# Remaining time label
+remaining_time_label = tk.Label(root, text="Time Remaining: 0s", bg=C_BG, fg=C_TEXT_DIM)
 remaining_time_label.grid(row=10, column=0, columnspan=3, padx=5, pady=5)
 
 # Terminal-like output
-terminal_frame = tk.Frame(root)
+terminal_frame = tk.Frame(root, bg=C_BG, highlightthickness=1, highlightbackground=C_ACCENT)
 terminal_frame.grid(row=11, column=0, columnspan=3, padx=5, pady=5)
 
-terminal_output = tk.Text(terminal_frame, height=10, width=50, wrap="word", bg="black", fg="white", font=("Courier", 10))
+terminal_output = tk.Text(terminal_frame, height=10, width=50, wrap="word",
+                           bg="#0d1a10", fg=C_ACCENT,
+                           insertbackground=C_ACCENT,
+                           font=("Courier", 10), relief="flat")
 terminal_output.pack(side="left", fill="both", expand=True)
-terminal_output_scroll = tk.Scrollbar(terminal_frame, command=terminal_output.yview)
+terminal_output_scroll = tk.Scrollbar(terminal_frame, command=terminal_output.yview,
+                                       bg=C_BG2, troughcolor=C_BG)
 terminal_output_scroll.pack(side="right", fill="y")
 terminal_output.config(yscrollcommand=terminal_output_scroll.set)
 
