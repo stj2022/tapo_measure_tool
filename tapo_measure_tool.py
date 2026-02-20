@@ -353,7 +353,7 @@ terminal_frame = tk.Frame(root, bg=C_BG, highlightthickness=1, highlightbackgrou
 terminal_frame.grid(row=11, column=0, columnspan=3, padx=5, pady=5)
 
 terminal_output = tk.Text(terminal_frame, height=10, width=50, wrap="word",
-                           bg="#0d1a10", fg=C_ACCENT,
+                           bg="#0d1a10", fg=C_TEXT,
                            insertbackground=C_ACCENT,
                            font=("Courier", 10), relief="flat")
 terminal_output.pack(side="left", fill="both", expand=True)
